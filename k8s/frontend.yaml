@@ -1,0 +1,56 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-service
+  namespace: shophub
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend-service
+  template:
+    metadata:
+      labels:
+        app: frontend-service
+        sidecar.opentelemetry.io/inject: "true"
+    spec:
+      containers:
+        - name: app
+          image: absolootly/frontend-service:latest
+          ports:
+            - containerPort: 8000
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "250m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+  namespace: shophub
+spec:
+  selector:
+    app: frontend-service
+  ports:
+    - port: 80
+      targetPort: 8000
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: python-otel-demo
+  namespace: shophub
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: Host(`shophub.edgesoft.local`)
+      kind: Rule
+      services:
+        - name: frontend-service
+          port: 80
