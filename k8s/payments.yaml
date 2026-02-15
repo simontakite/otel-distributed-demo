@@ -1,4 +1,3 @@
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -13,29 +12,49 @@ spec:
     metadata:
       labels:
         app: payments-service
-        sidecar.opentelemetry.io/inject: "true"
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "8000"
     spec:
       containers:
         - name: app
           image: absolootly/payments-service:latest
+          imagePullPolicy: Always
+
           ports:
             - containerPort: 8000
+
+          env:
+            - name: OTEL_SERVICE_NAME
+              value: "payments-service"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://monitoring-grafana-alloy.monitoring.svc.cluster.local:4318"
+            - name: OTEL_TRACES_SAMPLER_ARG
+              value: "1.0"
+            - name: DEPLOYMENT_ENV
+              value: "production"
+            - name: SERVICE_VERSION
+              value: "1.0.0"
+
           resources:
             requests:
-              memory: "128Mi"
-              cpu: "250m"
+              cpu: 100m
+              memory: 128Mi
             limits:
-              memory: "256Mi"
-              cpu: "500m"
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: payments-service
-  namespace: shophub
-spec:
-  selector:
-    app: payments-service
-  ports:
-    - port: 80
-      targetPort: 8000
+              cpu: 500m
+              memory: 256Mi
+
+          livenessProbe:
+            httpGet:
+              path: /charge
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+
+          readinessProbe:
+            httpGet:
+              path: /charge
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 5
