@@ -12,6 +12,7 @@ docker push absolootly/payments:latest
 docker push absolootly/frontend:latest
 
 ## K8s deploy
+kubectl apply -f k8s/
 
 ## Load testing
 k6 run k6/loadtest.js
